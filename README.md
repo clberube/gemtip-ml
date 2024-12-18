@@ -5,14 +5,14 @@ Pre-trained implementation of the Generalized Effective Medium Theory of Induced
 Please cite our [*Geophysics* paper](https://library.seg.org/doi/10.1190/geo2024-0107.1) if your research projects use this code.
 
 @article{berube_anisotropic_2024,  
-	title = {Anisotropic induced polarization modeling with neural networks and effective medium theory},  
-	author = {Bérubé, Charles L. and Gagnon, Jean-Luc},  
-	journal = {Geophysics},  
-	volume = {90},  
-	number = {2},  
-	year = {2024},  
-	pages = {1--68},  
-	doi = {10.1190/geo2024-0107.1},  
+    title = {Anisotropic induced polarization modeling with neural networks and effective medium theory},  
+    author = {Bérubé, Charles L. and Gagnon, Jean-Luc},  
+    journal = {Geophysics},  
+    volume = {90},  
+    number = {2},  
+    year = {2024},  
+    pages = {1--68},  
+    doi = {10.1190/geo2024-0107.1},  
 }
 
 The original submitted version of the manuscript is also available as an open access preprint:  
