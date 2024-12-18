@@ -1,5 +1,7 @@
 # GEMTIP-ML
-Pre-trained implementation of the Generalized Effective Medium Theory of Induced Polarization (GEMTIP) neural network for anisotropic rock-scale induced polarization modelling.
+Pre-trained implementation of the Generalized Effective Medium Theory of Induced Polarization (GEMTIP) neural network. This code allows fast and accurate rock-scale anisotropic induced polarization modelling.
+
+![plot](./assets/figures/timing-comparison-IPW.png)
 
 ## Citation
 Please cite our [*Geophysics* paper](https://library.seg.org/doi/10.1190/geo2024-0107.1) if your research projects use this code.
