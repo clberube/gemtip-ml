@@ -1,21 +1,22 @@
-# gemtip-neural-network
-Pre-trained implementation of the GEMTIP neural network for anisotropic rock-scale induced polarization modelling.
+# GEMTIP-ML
+Pre-trained implementation of the Generalized Effective Medium Theory of Induced Polarization (GEMTIP) neural network for anisotropic rock-scale induced polarization modelling.
 
 ## Citation
-Please cite our *Geophysics* paper if using the code for research purposes.
+Please cite our [*Geophysics* paper](https://library.seg.org/doi/10.1190/geo2024-0107.1) if your research projects use this code.
 
-@article{berube_anisotropic_2024,
-	title = {Anisotropic induced polarization modeling with neural networks and effective medium theory},
-	author = {Bérubé, Charles L. and Gagnon, Jean-Luc},
-	journal = {Geophysics},
-	volume = {90},
-	number = {2},
-	year = {2024},
-	pages = {1--68},
-	doi = {10.1190/geo2024-0107.1},
+@article{berube_anisotropic_2024,  
+	title = {Anisotropic induced polarization modeling with neural networks and effective medium theory},  
+	author = {Bérubé, Charles L. and Gagnon, Jean-Luc},  
+	journal = {Geophysics},  
+	volume = {90},  
+	number = {2},  
+	year = {2024},  
+	pages = {1--68},  
+	doi = {10.1190/geo2024-0107.1},  
 }
 
-The original submitted version of the manuscript is also available as an open access preprint: http://arxiv.org/abs/2402.11313 
+The original submitted version of the manuscript is also available as an open access preprint:  
+http://arxiv.org/abs/2402.11313 
 
 ## Dependencies
 This code uses scientific and plotting librairies available in the Anaconda Python distribution: 
