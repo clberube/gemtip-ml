@@ -12,7 +12,8 @@ import torch.nn as nn
 
 from network import MLP
 from emt import returnConducEff
-from utilities import restore_minor_ticks_log_plot, mape
+from utilities import mape
+from plotlib import restore_minor_ticks_log_plot
 
 
 device = "cpu"
