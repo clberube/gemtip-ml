@@ -31,7 +31,7 @@ It also uses specific librairies for deep learning and numerical integration:
 - torchquad 
 
 ## Usage
-For now, the codes only reproduce the validation experiments (Figures 2, 3) from the published paper.
+For now, the codes only reproduce the validation experiments (Figures 2 and 3) from the published paper.
 - The script validate_Zhdanov2008.py reproduces Figure 2.
 - The script validate_Zhdanov2018.py reproduces Figure 3.
 

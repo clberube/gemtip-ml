@@ -8,8 +8,6 @@
 import math
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 
 
 def truncate(n, decimals=0):
@@ -77,34 +75,3 @@ def normalize(x, xmin, xmax, ymin, ymax):
 def denormalize(x, xmin, xmax, ymin, ymax):
     # x mapped from ymin, ymax back to xmin, xmax
     return (x - ymin) * (xmax - xmin) / (ymax - ymin) + xmin
-
-
-def restore_minor_ticks_log_plot(ax, n_subticks=9, axis="both"):
-    """For axes with a logrithmic scale where the span (max-min) exceeds
-    10 orders of magnitude, matplotlib will not set logarithmic minor ticks.
-    If you don't like this, call this function to restore minor ticks.
-
-    Args:
-        ax:
-        n_subticks: Number of Should be either 4 or 9.
-
-    Returns:
-        None
-    """
-    if ax is None:
-        ax = plt.gca()
-    # Method from SO user importanceofbeingernest at
-    # https://stackoverflow.com/a/44079725/5972175
-    locmaj = mpl.ticker.LogLocator(base=10, numticks=1000)
-    locmin = mpl.ticker.LogLocator(
-        base=10.0, subs=np.linspace(0, 1.0, n_subticks + 2)[1:-1], numticks=1000
-    )
-
-    if axis == "x" or axis == "both":
-        ax.xaxis.set_major_locator(locmaj)
-        ax.xaxis.set_minor_locator(locmin)
-        ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
-    if axis == "y" or axis == "both":
-        ax.yaxis.set_major_locator(locmaj)
-        ax.yaxis.set_minor_locator(locmin)
-        ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())

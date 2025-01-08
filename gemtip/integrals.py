@@ -11,11 +11,6 @@ from torchquad import Simpson
 import torch
 
 
-###
-##MISC FUNCTIONS
-###
-
-
 def rhoIso(tp, A, B):
     rhoAB = torch.sqrt(
         (torch.sin(tp[0]) * torch.cos(tp[1])) ** 2
