@@ -13,7 +13,7 @@ import torch.nn as nn
 class MLP(nn.Module):
     # Réseau de neurones simple
     def __init__(
-        self, input_dim, hidden_dim, output_dim, n_hidden, activation=nn.Sigmoid()
+        self, input_dim, hidden_dim, output_dim, n_hidden, activation=nn.SiLU()
     ):
         super(MLP, self).__init__()
 
@@ -35,10 +35,9 @@ class MLP(nn.Module):
     def forward(self, x):
         for i, layer in enumerate(self.layers):
             if i < self.n_hidden:
-                # Activation dans les couches cachées
+                # Activation function applied to each hidden layer
                 x = self.activation(layer(x))
-                # x = F.dropout(x, 0.1)
             if i == self.n_hidden:
-                # Pas d'activation pour la couche de sortie
+                # Squash the output to [0, 1] with a sigmoid (improvement from the paper)
                 x = torch.sigmoid(layer(x))
         return x

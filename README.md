@@ -25,16 +25,13 @@ This code uses scientific and plotting librairies available in the Anaconda Pyth
 - numpy
 - matplotlib
 - scipy
-- pandas
-- seaborn
 
 It also uses specific librairies for deep learning and numerical integration:
 - pytorch
 - torchquad 
 
 ## Usage
-For now, the codes only reproduce the validation experiments (Figures 2, 3, 5, and 7) from the published paper.
-- The script validate_Berube2019.py reproduces Figures 5 and 7.
+For now, the codes only reproduce the validation experiments (Figures 2, 3) from the published paper.
 - The script validate_Zhdanov2008.py reproduces Figure 2.
 - The script validate_Zhdanov2018.py reproduces Figure 3.
 
