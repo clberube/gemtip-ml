@@ -7,20 +7,20 @@ import torch.nn as nn
 
 
 class MLP(nn.Module):
-    # Réseau de neurones simple
+    # Simple neural network
     def __init__(
         self, input_dim, hidden_dim, output_dim, n_hidden, activation=nn.SiLU()
     ):
         super(MLP, self).__init__()
 
-        # Hyper-paramètres du modèle
+        # Model hyperparameters 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
         self.n_hidden = n_hidden
         self.activation = activation
 
-        # Définition des couches
+        # Layers
         layer_list = [nn.Linear(input_dim, hidden_dim)]
         layer_list.extend(
             [nn.Linear(hidden_dim, hidden_dim) for _ in range(n_hidden - 1)]
