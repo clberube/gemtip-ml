@@ -1,10 +1,6 @@
-#
-# Author: Charles L. Bérubé
+# Authors : Charles L. Bérubé & J.-L. Gagnon
 # Created on: Fri Jun 02 2023
-#
 # Copyright (c) 2023 C.L. Bérubé & J.-L. Gagnon
-#
-
 
 import torch
 import torch.nn as nn
@@ -32,7 +28,7 @@ class MLP(nn.Module):
         layer_list.append(nn.Linear(hidden_dim, output_dim))
         self.layers = nn.ModuleList(layer_list)
 
-    def forward(self, x):
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
         for i, layer in enumerate(self.layers):
             if i < self.n_hidden:
                 # Activation function applied to each hidden layer

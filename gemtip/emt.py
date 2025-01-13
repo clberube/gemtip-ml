@@ -1,193 +1,168 @@
-#
-# Author: Charles L. Bérubé
+# Authors : Charles L. Bérubé & Jean-Luc Gagnon
 # Created on: Fri Jun 02 2023
-#
 # Copyright (c) 2023 C.L. Bérubé & J.-L. Gagnon
-#
 
-import numpy as np
+from network import MLP
+from torch import nn
 import torch
-from scipy.stats import special_ortho_group
 
+class GEMTIP_EMT:
 
-def rotationAxe(M, alpha=None, beta=None, gamma=None, random=False):
-    """Retourne une matrice tournée par rapport aux axes x,y,z
-    M     : Tenseur de dépolarisation à tourner
-    alpha : Angle par rapport à x
-    beta  : Angle par rapport à y
-    gamma : Angle par rapport à z
+    """Class to instance the device and neural network and use the function to obtain an anisotropic GEMTIP estimate.
+    wt_dir : Directory where the weights are stored
+    device : Device used (cuda or cpu)
     """
 
-    if random:
-        Mrot = special_ortho_group.rvs(3)
+    def __init__(self, device = "cpu", dtype = torch.float32, wt_dir = "./weights") -> None:
 
-    else:
-        Mrot = np.array(
-            [
-                [
-                    np.cos(alpha) * np.cos(beta),
-                    np.cos(alpha) * np.sin(beta) * np.sin(gamma)
-                    - np.sin(alpha) * np.cos(gamma),
-                    np.cos(alpha) * np.sin(beta) * np.cos(gamma)
-                    + np.sin(alpha) * np.sin(gamma),
-                ],
-                [
-                    np.sin(alpha) * np.cos(beta),
-                    np.sin(alpha) * np.sin(beta) * np.sin(gamma)
-                    + np.cos(alpha) * np.cos(gamma),
-                    np.sin(alpha) * np.sin(beta) * np.cos(gamma)
-                    - np.cos(alpha) * np.sin(gamma),
-                ],
-                [
-                    -np.sin(beta),
-                    np.cos(beta) * np.sin(gamma),
-                    np.cos(beta) * np.cos(gamma),
-                ],
-            ]
-        )
-    Mrot = torch.from_numpy(Mrot).float()
-    Mrotm1 = torch.transpose(Mrot, 0, 1)
-    Mrotated = Mrot @ M @ Mrotm1
+        self.device = device
+        self.dtype = dtype
 
-    return Mrotated
+        model_params = {
+            "input_dim": 4,  # Number of integration variables
+            "hidden_dim": 128,  # Dimension of the hidden layers
+            "output_dim": 6,  # Output dimensions
+            "n_hidden": 4,  # number of hidden layers
+            "activation": nn.SiLU(),  # activation function
+        }
+
+        # Neural network instance
+        weights = torch.load(f"{wt_dir}/weights-best.pt", weights_only=True, map_location=torch.device('cpu'))
+        model = MLP(**model_params)
+        model.load_state_dict(weights)
+        model.eval()
+        model.to(device = self.device, dtype=self.dtype)
 
 
-# Fonction générale, à utiliser seulement quand il y a une rotation et donc des termes non-diagonaux, sinon c'est plus lourd en terme de calcul :
-def returnConducRot(Lambdal, Gammal, min_abc, min_xyz, fl, sl, Cl, alphal, s0, w):
-    """Retourne la conductivité effective de grandeur (3 x 3) x w.size(), dans le cas générique, dans la base orthogonale (x,y,z)
-    Lambdal : Tenseur de dépolarisation surfacique
-    Gammal  : Tenseur de dépolarisation volumique
-    N       : Nombre d'inclusions différentes
-    fl      : Fraction volumique de la lième inclusion (1 x N)
-    sl      : Conductivité de la lième inclusion (1 x N)
-    Cl      : Coefficient de relaxation de la lième inclusion (1 x N)
-    s0      : Conductivité du matériau hôte = millieu infini (1 x N)
-    w       : Fréquences (1 x len(w))
-    """
+        self.model = model
 
-    sigmaTot = torch.empty(len(w), 3, 3, dtype=torch.complex64)
 
-    I = torch.eye(3)
 
-    s0 = s0.type(torch.complex64)
-    sl = sl.type(torch.complex64)
-    Lambdal = Lambdal.type(torch.complex64)
-    Gammal = Gammal.type(torch.complex64)
+    @torch.no_grad
+    def return_conduc_rot(self,gammal : torch.Tensor,lambdal : torch.Tensor, fl : torch.Tensor, sl : torch.Tensor, cl : torch.Tensor, 
+                        alphal : torch.Tensor, s0 : torch.Tensor, w : torch.Tensor) -> torch.Tensor:
+        """Returns the general effective medium conductivity. The tensors can be non-diagonal. 
+        This is for a medium with N ellipsoidal inclusions with W frequencies considered.
 
-    s0 = s0.unsqueeze(0)
+        Input :  
+            lambdal : Surface depolarization tensors (N x 3 x 3)
+            gammal  : Volume depolarization tensors (N x 3 x 3)
+            fl      : Volume fractions (N x 1)
+            sl      : Inclusion conductivities (N x 1)
+            cl      : Inclusion relaxation factors (N x 1)
+            alphal  : Surface polarisability factors
+            s0      : Bulk conductivity (3 x 3)
+            w       : Frequencies (1 x W)
 
-    fl = fl.unsqueeze(-1).unsqueeze(-1)
-    Cl = Cl.unsqueeze(-1).unsqueeze(-1)
-    alphal = alphal.unsqueeze(-1).unsqueeze(-1)
+        Output : 
+            sigma_tot : Effective medium conductivity (3 x W)
+        """
+        N = len(fl)
+        sigma_tot = torch.empty(len(w), 3, 3, dtype=torch.complex64, device = self.device)
 
-    Lambdal = Lambdal @ torch.linalg.inv(s0) / min_xyz / min_abc
-    Gammal = Gammal @ torch.linalg.inv(s0) / min_xyz
+        ii = torch.eye(3, device = self.device, dtype = self.dtype)
 
-    for i in range(len(w)):
-        kl = alphal * (1j * w[i]) ** (-Cl)
-        deltasig = sl * I - s0
-        khii = kl * (s0 * sl) @ torch.linalg.inv(deltasig)
-        pl = khii @ Lambdal @ torch.linalg.inv(Gammal)
-        sumN = (
-            (
-                torch.linalg.inv(I + pl)
-                @ torch.linalg.inv(I - deltasig * ((I + pl) @ -Gammal))
-                @ (I + pl)
+        ii = ii.unsqueeze(0)
+        ii = ii.repeat(N,1,1)
+        s0 = s0.type(torch.complex64)
+        sl = sl.type(torch.complex64)
+        lambdal = lambdal.type(torch.complex64)
+        gammal = gammal.type(torch.complex64)
+
+    
+
+        s0 = s0.unsqueeze(0)
+        s0 = s0.repeat(N,1,1)
+
+        sl = sl.unsqueeze(-1).unsqueeze(-1)
+        fl = fl.unsqueeze(-1).unsqueeze(-1)
+        alphal = alphal.unsqueeze(-1).unsqueeze(-1)
+        cl = cl.unsqueeze(-1).unsqueeze(-1)
+
+        deltasig = sl * ii - s0
+        chi = (s0 * sl) @ torch.linalg.inv(deltasig)
+
+        for i,_ in enumerate(w):
+
+            kl = alphal * (1j * w[i]) ** (-cl)
+
+
+            khii = kl * chi
+            pl = khii @ lambdal @ torch.linalg.inv(gammal)
+            sum_n = (
+                (
+                    torch.linalg.inv(ii + pl)
+                    @ torch.linalg.inv(ii - deltasig * ((ii + pl) @ -gammal))
+                    @ (ii + pl)
+                )
+                * fl
+                * deltasig
             )
-            * fl
-            * deltasig
-        )
-        sigmaTot[i] = s0 * I + sumN.sum(0)
+            sigma_tot[i] = s0[0] * ii[0] + sum_n.sum(0)
 
-    return sigmaTot
+        return sigma_tot
+    
+    @torch.no_grad
+    def eval_depol_tensor(self, a_l : torch.Tensor, b_l : torch.Tensor, c_l : torch.Tensor, s0 : torch.Tensor) -> tuple[torch.Tensor]:
+        """
+        Function to evaluate the depolarization tensors. 
+        a_l >= b_l , a_l >= c_l and s0_x >= s0_y, s0_x >= s0_z. 
 
+        Input : 
+            a_l : length of the ellipsoid semi-axis in the x direction 
+            b_l : length of the ellipsoid semi-axis in the y direction 
+            c_l : length of the ellipsoid semi-axis in the z direction 
+            s0  : Bulk conductivity tensor
 
-def returnConducEff(Lambdal, Gammal, al, fl, sl, Cl, alphal, s0, w):
-    """Retourne la conductivité effective de grandeur 3 x w.size(), donc en x,y,z dans le cas spécifique où les deux tenseurs sont diagonaux
-    Lambdal : Tenseur de dépolarisation surfacique
-    Gammal  : Tenseur de dépolarisation volumique
-    N       : Nombre d'inclusions différentes
-    fl      : Fraction volumique de la lième inclusion (1 x N)
-    sl      : Conductivité de la lième inclusion (1 x N)
-    Cl      : Coefficient de relaxation de la lième inclusion (1 x N)
-    s0      : Conductivité du matériau hôte = millieu infini (1 x N)
-    w       : Fréquences (1 x len(w))
-    """
-    sumN11 = 0
-    sumN22 = 0
-    sumN33 = 0
-    Lambdal = Lambdal / (s0 * al).unsqueeze(-1).unsqueeze(-1)
-    Gammal = Gammal / s0
-    for i in range(len(Lambdal)):
-        kl = alphal[i] * (1j * w) ** (-Cl[i])
-        deltasig = sl[i] - s0
-        khii = kl * (s0 * sl[i]) / (deltasig)
-        sumi11 = fl[i] / (
-            np.ones(len(w)) / deltasig
-            + (Lambdal[i][0, 0] * khii + Gammal[i][0, 0] * np.ones(len(w)))
-        )
-        sumi22 = fl[i] / (
-            np.ones(len(w)) / deltasig
-            + (Lambdal[i][1, 1] * khii + Gammal[i][1, 1] * np.ones(len(w)))
-        )
-        sumi33 = fl[i] / (
-            np.ones(len(w)) / deltasig
-            + (Lambdal[i][2, 2] * khii + Gammal[i][2, 2] * np.ones(len(w)))
-        )
-        sumN11 = sumi11 + sumN11
-        sumN22 = sumi22 + sumN22
-        sumN33 = sumi33 + sumN33
-    sigmaEff = (
-        s0 * np.ones(len(w)) + sumN11,
-        s0 * np.ones(len(w)) + sumN22,
-        s0 * np.ones(len(w)) + sumN33,
-    )
-    return sigmaEff
+        Output
+            dpolt : Surface and volume depolarization tensors
+        """
 
 
-def Nrandomparam(minmax, Nobjec):
-    """Fonction retournant selon une liste d'extremum N paramètres
-    minmax : Liste de la forme [min,max]
-    Nobjec : Nombre de paramètre à générer
-    """
-    s = np.random.uniform(minmax[0], minmax[1], Nobjec)
-    return s
+        A = b_l * a_l ** (-1) 
+        B = c_l * a_l ** (-1)
+
+        #Fit the dimensions
+        N = len(A)
+
+        C = (s0[1,1]/s0[0,0]).repeat(N)
+        D = (s0[2,2]/s0[0,0]).repeat(N)
+
+        ABCD = torch.cat((A,B,C,D))
+
+        assert (ABCD.dtype == torch.float32 or ABCD.dtype == torch.float64)
+        assert (torch.all(ABCD) <= 1), "Not all ratios (A,B,C,D) are strictly smaller than one"
+
+        depolt_p = self.model.forward(torch.stack((A,B,C,D)).T)
+
+        #Create the normalising matrix 
+        norm_Lamb1 = (a_l.unsqueeze(1).repeat(1,3)) ** (-1)
+        norm_Gamm = torch.ones_like(norm_Lamb1) 
+
+        norm_Lamb_p = torch.ones_like(norm_Lamb1)
+
+        norm_Lamb = torch.multiply(norm_Lamb1,norm_Lamb_p)
+        
+        norm_fact = torch.cat((norm_Gamm,norm_Lamb),1)
+
+        #Get the normalized pre-tensors
+        depolt = torch.multiply(depolt_p,norm_fact)
+
+        depolt = depolt.split(depolt.size(1)//2, 1)
+        depolt = [torch.diag_embed(split_tensor) for split_tensor in depolt]
+
+        #Get the final tensors
+        depol_gamma = depolt[0] * s0.inverse()
+        depol_lambda = depolt[1] * s0.inverse()
+
+        return depol_gamma,depol_lambda
 
 
-def Nrandomabc(minmax, Nobjec):
-    """Fonction retournant selon une liste d'extremum 3N paramètres qui respecte la condition s[0] > s[1] > s[2]
-    minmax : Liste de la forme [min,max]
-    Nobjec : Nombre de paramètre à générer
-    """
-    a = np.random.uniform(minmax[0], minmax[1], Nobjec)
-    b = np.random.uniform(minmax[0], minmax[1], Nobjec)
-    c = np.random.uniform(minmax[0], minmax[1], Nobjec)
-    s = np.transpose(np.sort([a, b, c], axis=0))
-    s = np.flip(s, axis=1)
-    return s
 
 
-def returnGEMTIPalphaBorn(s0, sl, taul, Cl, amoy):
-    """Fonction retournant selon des listes d'extremum les bornes sur le paramètre semi-empirique alpha
-    sl   : Conductivité de la lième inclusion (1 x N)
-    s0   : Conductivité du matériau hôte = millieu infini (1 x N)
-    fl   : Fraction volumique de la lième inclusion (1 x N)
-    sl   : Conductivité de la lième inclusion (1 x N)
-    Cl   : Coefficient de relaxation de la lième inclusion (1 x N)
-    amoy : Rayon moyen (a + b + c)/3
-    """
-    pl = np.reciprocal(sl)
-    p0 = np.reciprocal(s0)
 
-    alphamin = (amoy[0] * (2 * pl[0] + p0[0])) / (taul[1]) ** (Cl[0])
-    alphamax = (amoy[1] * (2 * pl[1] + p0[1])) / (taul[0]) ** (Cl[1])
-    return np.array([alphamin, alphamax])
+        
 
 
-def dirichletSum(maxFrac, N):
-    """Fonction retournant au maximum une liste contenant les fractions volumiques sommant à maxFrac
-    maxFrac : Valeur maximale de la somme de la fraction totale d'inclusion
-    N       : Nombre d'inclusion différentes
-    """
-    fl = maxFrac * np.random.rand() * np.random.dirichlet(np.ones(N))
-    return fl
+
+

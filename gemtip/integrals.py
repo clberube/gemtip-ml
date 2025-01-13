@@ -1,9 +1,6 @@
-#
-# Author: Charles L. Bérubé
+# Authors : Charles L. Bérubé & J.-L. Gagnon
 # Created on: Fri Jun 02 2023
-#
 # Copyright (c) 2023 C.L. Bérubé & J.-L. Gagnon
-#
 
 import numpy as np
 from scipy.special import ellipkinc, ellipeinc
