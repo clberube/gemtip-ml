@@ -1,10 +1,10 @@
 # Authors : Charles L. Bérubé & J.-L. Gagnon
 # Created on: Fri Jun 02 2023
 # Copyright (c) 2023 C.L. Bérubé & J.-L. Gagnon
-
-from emt import*
+import torch
+from emt import GEMTIP_EMT
 import matplotlib.pyplot as plt
-from plotlib import*
+from plotlib import plot_conductivities
 
 #Device used 
 
