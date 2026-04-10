@@ -1,6 +1,9 @@
-# Authors : Charles L. Bérubé & J.-L. Gagnon
+#
+# Author: Charles L. Bérubé
 # Created on: Fri Jun 02 2023
+#
 # Copyright (c) 2023 C.L. Bérubé & J.-L. Gagnon
+#
 
 import math
 
